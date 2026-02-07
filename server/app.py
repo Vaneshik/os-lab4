@@ -39,18 +39,16 @@ async def init(token: str, db: Session = Depends(get_db)):
     if existing:
         return success_response(pack_uint64(existing.root_id))
     
-    # Check if root inode already exists
-    root = db.query(Inode).filter(Inode.id == 1000).first()
-    if not root:
-        root = Inode(id=1000, type=VTFS_DIR, mode=0o777, size=0, nlink=2)
-        db.add(root)
-        db.flush()
+    # Create a NEW root inode for this token
+    root = Inode(type=VTFS_DIR, mode=0o777, size=0, nlink=2)
+    db.add(root)
+    db.flush()  # Get the auto-generated ID
     
-    new_token = Token(token=token, root_id=1000)
+    new_token = Token(token=token, root_id=root.id)
     db.add(new_token)
     db.commit()
     
-    return success_response(pack_uint64(1000))
+    return success_response(pack_uint64(root.id))
 
 @app.get("/api/getattr")
 async def getattr(token: str, id: int, db: Session = Depends(get_db)):
